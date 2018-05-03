@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns#">
+<head>
+  <meta charset="UTF-8" />
+  <title>AOSP on macos high Sierra | A-NOTES</title>
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/normalize.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700,700i%7CSource+Code+Pro:400,400i,600" />
+  <link rel="stylesheet" href="https://alset0326.github.io/static/m-light.compiled.css" />
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/highlight.css" />
+  <link rel="icon" href="https://alset0326.github.io/images/logo.jpeg" type="image/jpeg" />
+  <link rel="canonical" href="https://alset0326.github.io/aosp-on-macos-high-sierra.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#cb4b16" />
+  <meta property="og:site_name" content="A-NOTES" />
+  <meta property="og:title" content="AOSP on macos high Sierra" />
+  <meta name="twitter:title" content="AOSP on macos high Sierra" />
+  <meta property="og:url" content="https://alset0326.github.io/aosp-on-macos-high-sierra.html" />
+  <meta property="og:description" content="AOSP issues on macos high Sierra" />
+  <meta name="twitter:description" content="AOSP issues on macos high Sierra" />
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:type" content="article" />
+</head>
+<body>
+<header><nav id="navigation">
+  <div class="m-container">
+    <div class="m-row">
+      <a href="https://alset0326.github.io/" id="m-navbar-brand" class="m-col-t-9 m-col-m-none m-left-m">A-NOTE To Remind Something</a>
+      <a id="m-navbar-show" href="#navigation" title="Show navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <a id="m-navbar-hide" href="#" title="Hide navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <div id="m-navbar-collapse" class="m-col-t-12 m-show-m m-col-m-none m-right-m">
+        <div class="m-row">
+          <ol class="m-col-t-6 m-col-m-none">
+            <li><a href="https://alset0326.github.io/">HOME</a></li>
+          </ol>
+          <ol class="m-col-t-6 m-col-m-none" start="2">
+            <li><a href="https://github.com/alset0326">GITHUB</a></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav></header>
+<main>
+<div class="m-container">
+  <div class="m-row">
+    <article class="m-col-m-10 m-nopadb">
+      <header>
+        <h1><a href="https://alset0326.github.io/aosp-on-macos-high-sierra.html" rel="bookmark" title="Permalink to AOSP on macos high Sierra">
+          <time class="m-date" datetime="2018-03-08T08:50:53.066376+08:00">
+            3 <span class="m-date-day">08</span> 2018
+          </time>
+          AOSP on macos high Sierra
+        </a></h1>
+        <p>AOSP issues on macos high Sierra</p>
+      </header>
+      <div class="m-clearfix-l"></div>
+<!-- content -->
+<h2 id="bison-error">bison error</h2>
+<blockquote>
+<p><a href="https://juejin.im/post/5a3d2104f265da4311206809">https://juejin.im/post/5a3d2104f265da4311206809</a></p>
+</blockquote>
+<p>On macos high sierra bison needs a patch. Or may cause errors like</p>
+<div class="highlight"><pre><span></span>[  0% 391/82033] //external/selinux/checkpolicy:checkpolicy yacc policy_parse.y [darwin]
+FAILED: out/soong/.intermediates/external/selinux/checkpolicy/checkpolicy/darwin_x86_64/gen/yacc/external/selinux/checkpolicy/policy_parse.c out/soong/.intermediates/external/selinux/checkpolicy/checkpolicy/darwin_x86_64/gen/yacc/external/selinux/checkpolicy/policy_parse.h
+BISON_PKGDATADIR=external/bison/data prebuilts/misc/darwin-x86/bison/bison -d  --defines=out/soong/.intermediates/external/selinux/checkpolicy/checkpolicy/darwin_x86_64/gen/yacc/external/selinux/checkpolicy/policy_parse.h -o out/soong/.intermediates/external/selinux/checkpolicy/checkpolicy/darwin_x86_64/gen/yacc/external/selinux/checkpolicy/policy_parse.c external/selinux/checkpolicy/policy_parse.y
+ninja: build stopped: subcommand failed.
+08:09:51 ninja failed with: exit status 1
+</pre></div>
+
+<p>solusion:</p>
+<div class="highlight"><pre><span></span>//https://groups.google.com/forum/#!topic/android-building/D1-c5lZ9Oco
+
+I was able to fix this issue with the following steps:
+
+Patch bison fix for High Sierra and build bison:
+
+cd /Volumes/AOSP/external/bison
+
+git cherry-pick c0c852bd6fe462b148475476d9124fd740eba160
+
+mm
+
+Replace prebuilt bison binary with patched binary
+
+cp /Volumes/AOSP/out/host/darwin-x86/bin/bison /Volumes/AOSP/prebuilts/misc/darwin-x86/bison/
+</pre></div>
+
+<h2 id="jack-error">jack error</h2>
+<div class="highlight"><pre><span></span>Internal unknown error <span class="o">(</span><span class="m">415</span><span class="o">)</span>, try <span class="s1">&#39;jack-diagnose&#39;</span> or see Jack server log
+</pre></div>
+
+<p>download and compile curl 7.55.1</p>
+<!-- /content -->
+      <footer>
+        <p>Posted by <a href="https://alset0326.github.io/author/alset0326.html">Alset0326</a> on <time datetime="2018-03-08T08:50:53.066376+08:00">四 08 三月 2018</time> in <a href="https://alset0326.github.io/category/android.html">android</a>. <span class="m-label m-success">updated <time datetime="2018-03-08T08:50:53.066376+08:00">四 08 三月 2018</time></span> Tags: <a href="https://alset0326.github.io/tag/aosp.html">aosp</a>, <a href="https://alset0326.github.io/tag/android.html">android</a>.</p>
+      </footer>
+    </article>
+    <nav class="m-navpanel m-col-m-2">
+      <h3>Categories</h3>
+      <ol class="m-block-bar-m">
+        <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+        <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+        <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+        <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+      </ol>
+      <h3>Tag cloud</h3>
+      <ul class="m-tagcloud">
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/android.html">android</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/aosp.html">aosp</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/heap.html">heap</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/linux.html">linux</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/patch.html">patch</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/pwn.html">pwn</a></li>
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/python.html">python</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/stack.html">stack</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+</main>
+<footer><nav>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326?tab=repositories">Projects</a></h3>
+        <ul>
+          <li><a href="https://github.com/alset0326/peda-arm">peda-arm</a></li>
+          <li><a href="https://github.com/alset0326/zio3">zio3</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Author</a></h3>
+        <ul>
+          <li><a href="http://127.0.0.1:8000/author/alset0326.html">Alset0326</a></li>
+        </ul>
+      </div>
+      <div class="m-clearfix-t"></div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326">Contact</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/alset0326@gmail.com">E-mail</a></li>
+          <li><a href="https://github.com/alset0326">GitHub</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Blog</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+          <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+          <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+          <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        <p>A-NOTES. Powered by <a href="https://getpelican.com">Pelican</a> and <a href="http://mcss.mosra.cz">m.css</a>.</p>
+      </div>
+    </div>
+  </div>
+</nav></footer>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns#">
+<head>
+  <meta charset="UTF-8" />
+  <title>Set up kivy and buildozer environment | A-NOTES</title>
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/normalize.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700,700i%7CSource+Code+Pro:400,400i,600" />
+  <link rel="stylesheet" href="https://alset0326.github.io/static/m-light.compiled.css" />
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/highlight.css" />
+  <link rel="icon" href="https://alset0326.github.io/images/logo.jpeg" type="image/jpeg" />
+  <link rel="canonical" href="https://alset0326.github.io/set-up-kivy-and-buildozer-environment.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#cb4b16" />
+  <meta property="og:site_name" content="A-NOTES" />
+  <meta property="og:title" content="Set up kivy and buildozer environment" />
+  <meta name="twitter:title" content="Set up kivy and buildozer environment" />
+  <meta property="og:url" content="https://alset0326.github.io/set-up-kivy-and-buildozer-environment.html" />
+  <meta property="og:description" content="Tutorial for setting up environment for kivy and buildozer" />
+  <meta name="twitter:description" content="Tutorial for setting up environment for kivy and buildozer" />
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:type" content="article" />
+</head>
+<body>
+<header><nav id="navigation">
+  <div class="m-container">
+    <div class="m-row">
+      <a href="https://alset0326.github.io/" id="m-navbar-brand" class="m-col-t-9 m-col-m-none m-left-m">A-NOTE To Remind Something</a>
+      <a id="m-navbar-show" href="#navigation" title="Show navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <a id="m-navbar-hide" href="#" title="Hide navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <div id="m-navbar-collapse" class="m-col-t-12 m-show-m m-col-m-none m-right-m">
+        <div class="m-row">
+          <ol class="m-col-t-6 m-col-m-none">
+            <li><a href="https://alset0326.github.io/">HOME</a></li>
+          </ol>
+          <ol class="m-col-t-6 m-col-m-none" start="2">
+            <li><a href="https://github.com/alset0326">GITHUB</a></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav></header>
+<main>
+<div class="m-container">
+  <div class="m-row">
+    <article class="m-col-m-10 m-nopadb">
+      <header>
+        <h1><a href="https://alset0326.github.io/set-up-kivy-and-buildozer-environment.html" rel="bookmark" title="Permalink to Set up kivy and buildozer environment">
+          <time class="m-date" datetime="2018-03-08T09:23:39.347317+08:00">
+            3 <span class="m-date-day">08</span> 2018
+          </time>
+          Set up kivy and buildozer environment
+        </a></h1>
+        <p>Tutorial for setting up environment for kivy and buildozer</p>
+      </header>
+      <div class="m-clearfix-l"></div>
+<!-- content -->
+<p>After so many trys, I found that buildozer doesn't  support python3. So, fxxk it.</p>
+<p>This tutorial is on ubuntu Desktop 17.10. Server version is not worked eithor because you cannot exec SDK manager to modify proxy.</p>
+<p>Let's use python2 from the beginning.</p>
+<h2 id="0-make-sure-python2-installed">0. make sure python2 installed</h2>
+<div class="highlight"><pre><span></span>sudo apt install python python-dev python-pip
+</pre></div>
+
+<h2 id="1-install-cython">1. install cython</h2>
+<div class="highlight"><pre><span></span>sudo -H pip install cython==0.25 # other versions may go wrong
+</pre></div>
+
+<h2 id="2-install-kivy">2. install kivy</h2>
+<div class="highlight"><pre><span></span># Install necessary system packages
+sudo apt install -y \
+python-pip \
+build-essential \
+git \
+ffmpeg \
+libsdl2-dev \
+libsdl2-image-dev \
+libsdl2-mixer-dev \
+libsdl2-ttf-dev \
+libportmidi-dev \
+libswscale-dev \
+libavformat-dev \
+libavcodec-dev \
+zlib1g-dev
+
+# Install gstreamer for audio, video (optional)
+sudo apt install -y \
+libgstreamer1.0 \
+gstreamer1.0-plugins-base \
+gstreamer1.0-plugins-good
+
+# Note: Depending on your Linux version, you may receive error messages related to the “ffmpeg” package. In this scenario, use “libav-tools ” in place of “ffmpeg ” (above), or use a PPA (as shown below):
+sudo add-apt-repository ppa:mc3man/trusty-media
+sudo apt update
+sudo apt install ffmpeg
+
+sudo -H pip install kivy
+</pre></div>
+
+<h2 id="3-install-buildozer">3. install buildozer</h2>
+<div class="highlight"><pre><span></span>sudo dpkg --add-architecture i386
+sudo apt update
+sudo apt install build-essential ccache git libncurses5:i386 libstdc++6:i386 libgtk2.0-0:i386 libpangox-1.0-0:i386 libpangoxft-1.0-0:i386 libidn11:i386 default-jdk unzip zlib1g-dev zlib1g:i386
+sudo -H pip install buildozer
+</pre></div>
+
+<h2 id="4-install-python-for-android">4. install python-for-android</h2>
+<div class="highlight"><pre><span></span>sudo -H pip install python-for-android
+sudo apt install -y build-essential ccache git zlib1g-dev libncurses5:i386 libstdc++6:i386 zlib1g:i386 unzip ant ccache autoconf libtool
+sudo apt install pkg-config
+</pre></div>
+
+<h2 id="5-mkdir-and-coding">5. mkdir and coding</h2>
+<div class="highlight"><pre><span></span>mkdir kivyproject
+cd kivyproject
+cat &gt;main.py &lt;EOF
+from kivy.app import App
+from kivy.uix.button import Label
+
+class HelloApp(App):
+def build(self):
+return Label(text=&#39;Hello World&#39;)
+
+if __name__==&quot;__main__&quot;:
+HelloApp().run()
+EOF
+python main.py
+</pre></div>
+
+<h2 id="6-init-buildozer-project">6. init buildozer project</h2>
+<div class="highlight"><pre><span></span>buildozer init
+</pre></div>
+
+<h2 id="7-build-android-project">7. build android project</h2>
+<div class="highlight"><pre><span></span>buildozer android debug
+</pre></div>
+
+<h2 id="8-error-aidl-not-installed-occured">8. Error <code># Aidl not installed</code> occured</h2>
+<div class="highlight"><pre><span></span>run ~/.buildozer/android/platform/android-sdk-20/tools/android
+set proxy
+close
+</pre></div>
+
+<h2 id="9-build-again">9. build again</h2>
+<div class="highlight"><pre><span></span>export ANDROIDSDK=$HOME/.buildozer/android/platform/android-sdk-20
+export ANDROIDNDK=$HOME/.buildozer/android/platform/android-ndk-r9c
+export ANDROIDAPI=19
+export ANDROIDNDKVER=r9c
+buildozer android debug
+</pre></div>
+
+<h2 id="10-release-build">10. release build</h2>
+<p>set keystore</p>
+<div class="highlight"><pre><span></span>export P4A_RELEASE_KEYSTORE=&#39;absulote path of the keystore&#39;
+export P4A_RELEASE_KEYSTORE_PASSWD=
+export P4A_RELEASE_KEYALIAS=
+export P4A_RELEASE_KEYALIAS_PASSWD=
+buildozer android release
+</pre></div>
+
+<h2 id="11-fix-bug">11. fix bug</h2>
+<p><code>cdef</code> error. Just modify it!</p>
+<p><code>getaddrinfo()</code> error. Don't use <code>proxychains</code> to run buildozer at last.</p>
+<p><code>X Error of failed request:  BadWindow (invalid Window parameter)</code> error. <code>multisamples</code> set to 0 in <code>~/.kivy/config.ini</code> , in Ubuntu 17.10.</p>
+<!-- /content -->
+      <footer>
+        <p>Posted by <a href="https://alset0326.github.io/author/alset0326.html">Alset0326</a> on <time datetime="2018-03-08T09:23:39.347317+08:00">四 08 三月 2018</time> in <a href="https://alset0326.github.io/category/android.html">android</a>. <span class="m-label m-success">updated <time datetime="2018-03-08T09:23:39.347317+08:00">四 08 三月 2018</time></span> Tags: <a href="https://alset0326.github.io/tag/android.html">android</a>, <a href="https://alset0326.github.io/tag/python.html">python</a>.</p>
+      </footer>
+    </article>
+    <nav class="m-navpanel m-col-m-2">
+      <h3>Categories</h3>
+      <ol class="m-block-bar-m">
+        <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+        <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+        <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+        <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+      </ol>
+      <h3>Tag cloud</h3>
+      <ul class="m-tagcloud">
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/android.html">android</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/aosp.html">aosp</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/heap.html">heap</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/linux.html">linux</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/patch.html">patch</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/pwn.html">pwn</a></li>
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/python.html">python</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/stack.html">stack</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+</main>
+<footer><nav>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326?tab=repositories">Projects</a></h3>
+        <ul>
+          <li><a href="https://github.com/alset0326/peda-arm">peda-arm</a></li>
+          <li><a href="https://github.com/alset0326/zio3">zio3</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Author</a></h3>
+        <ul>
+          <li><a href="http://127.0.0.1:8000/author/alset0326.html">Alset0326</a></li>
+        </ul>
+      </div>
+      <div class="m-clearfix-t"></div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326">Contact</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/alset0326@gmail.com">E-mail</a></li>
+          <li><a href="https://github.com/alset0326">GitHub</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Blog</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+          <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+          <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+          <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        <p>A-NOTES. Powered by <a href="https://getpelican.com">Pelican</a> and <a href="http://mcss.mosra.cz">m.css</a>.</p>
+      </div>
+    </div>
+  </div>
+</nav></footer>
+</body>
+</html>

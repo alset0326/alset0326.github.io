@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns#">
+<head>
+  <meta charset="UTF-8" />
+  <title>Linux Mount New Disk | A-NOTES</title>
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/normalize.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700,700i%7CSource+Code+Pro:400,400i,600" />
+  <link rel="stylesheet" href="https://alset0326.github.io/static/m-light.compiled.css" />
+  <link rel="stylesheet" href="https://alset0326.github.io/extra/highlight.css" />
+  <link rel="icon" href="https://alset0326.github.io/images/logo.jpeg" type="image/jpeg" />
+  <link rel="canonical" href="https://alset0326.github.io/linux-mount-new-disk.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#cb4b16" />
+  <meta property="og:site_name" content="A-NOTES" />
+  <meta property="og:title" content="Linux Mount New Disk" />
+  <meta name="twitter:title" content="Linux Mount New Disk" />
+  <meta property="og:url" content="https://alset0326.github.io/linux-mount-new-disk.html" />
+  <meta property="og:description" content="How to mount new disk on Linux" />
+  <meta name="twitter:description" content="How to mount new disk on Linux" />
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:type" content="article" />
+</head>
+<body>
+<header><nav id="navigation">
+  <div class="m-container">
+    <div class="m-row">
+      <a href="https://alset0326.github.io/" id="m-navbar-brand" class="m-col-t-9 m-col-m-none m-left-m">A-NOTE To Remind Something</a>
+      <a id="m-navbar-show" href="#navigation" title="Show navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <a id="m-navbar-hide" href="#" title="Hide navigation" class="m-col-t-3 m-hide-m m-text-right"></a>
+      <div id="m-navbar-collapse" class="m-col-t-12 m-show-m m-col-m-none m-right-m">
+        <div class="m-row">
+          <ol class="m-col-t-6 m-col-m-none">
+            <li><a href="https://alset0326.github.io/">HOME</a></li>
+          </ol>
+          <ol class="m-col-t-6 m-col-m-none" start="2">
+            <li><a href="https://github.com/alset0326">GITHUB</a></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav></header>
+<main>
+<div class="m-container">
+  <div class="m-row">
+    <article class="m-col-m-10 m-nopadb">
+      <header>
+        <h1><a href="https://alset0326.github.io/linux-mount-new-disk.html" rel="bookmark" title="Permalink to Linux Mount New Disk">
+          <time class="m-date" datetime="2018-03-16T16:20:47.645128+08:00">
+            3 <span class="m-date-day">16</span> 2018
+          </time>
+          Linux Mount New Disk
+        </a></h1>
+        <p>How to mount new disk on Linux</p>
+      </header>
+      <div class="m-clearfix-l"></div>
+<!-- content -->
+<h2 id="1-check-new-disk-status">1. Check new disk status</h2>
+<p>[root@db1 /]# <code>fdisk -l</code></p>
+<p>Disk /dev/sda: 10.7 GB, 10737418240 bytes</p>
+<p>255 heads, 63 sectors/track, 1305 cylinders</p>
+<p>Units = cylinders of 16065 * 512 = 8225280 bytes</p>
+<p>Device Boot      Start         End      Blocks   Id  System</p>
+<p>/dev/sda1   *         151        1305     9277537+  83  Linux</p>
+<p>/dev/sda2               1         150     1204843+  82  Linux swap</p>
+<p>Partition table entries are not in disk order</p>
+<p><strong>Disk /dev/sdb: 5368 MB, 5368709120 bytes</strong></p>
+<p>255 heads, 63 sectors/track, 652 cylinders</p>
+<p>Units = cylinders of 16065 * 512 = 8225280 bytes</p>
+<p>Device Boot      Start         End      Blocks   Id  System</p>
+<h3 id="new-disk-devsdb-occured">new disk <code>/dev/sdb</code> occured.</h3>
+<h2 id="2-partition-devsdb-with-frisk">2. Partition <code>/dev/sdb</code> with <code>frisk</code></h2>
+<p>[root@db1 /]# <code>fdisk /dev/sdb</code></p>
+<p>Command (m for help): n</p>
+<p>Command action</p>
+<p>e   extended</p>
+<p>p   primary partition (1-4)</p>
+<p><strong>p</strong></p>
+<p>Partition number (1-4): <strong>1</strong></p>
+<p>First cylinder (1-652, default 1):</p>
+<p>Using default value 1</p>
+<p>Last cylinder or +size or +sizeM or +sizeK (1-652, default 652):</p>
+<p>Using default value 652</p>
+<p>Command (m for help): <strong>w</strong></p>
+<p>The partition table has been altered!</p>
+<p>Calling ioctl() to re-read partition table.</p>
+<p>Syncing disks.</p>
+<h3 id="check-the-partition-again-a-new-partition-occurred-devsdb1-the-number-1-is-we-assigned-above">Check the partition again. A new partition occurred, <code>/dev/sdb1</code>. The number 1 is we assigned above.</h3>
+<p>[root@db1 /]# <code>fdisk -l</code></p>
+<p>Disk /dev/sda: 10.7 GB, 10737418240 bytes</p>
+<p>255 heads, 63 sectors/track, 1305 cylinders</p>
+<p>Units = cylinders of 16065 * 512 = 8225280 bytes</p>
+<p>Device Boot      Start         End      Blocks   Id  System</p>
+<p>/dev/sda1   *         151        1305     9277537+  83  Linux</p>
+<p>/dev/sda2               1         150     1204843+  82  Linux swap</p>
+<p>Partition table entries are not in disk order</p>
+<p>Disk /dev/sdb: 5368 MB, 5368709120 bytes</p>
+<p>255 heads, 63 sectors/track, 652 cylinders</p>
+<p>Units = cylinders of 16065 * 512 = 8225280 bytes </p>
+<p>Device Boot      Start         End      Blocks   Id  System</p>
+<p><strong>/dev/sdb1               1         652     5237158+  83  Linux</strong></p>
+<p>[root@db1 /]#</p>
+<h3 id="if-we-cannot-see-partitions-in-procpartitions-use-command-parprobe-to-refresh">If we cannot see partitions in <code>/proc/partitions</code>, Use command parprobe to refresh</h3>
+<p>[root@web1 ~]<code># cat /proc/partitions  major minor  #blocks  name</code>
+   8     0  175825944 sda    8     1    1020096 sda1    8     2   30716280 sda2    8     3    8193150 sda3 [root@web1 ~]# partprobe /dev/sda </p>
+<p>[root@web1 ~]<code># cat /proc/partitions  major minor  #blocks  name</code>
+   8     0  175825944 sda    8     1    1020096 sda1    8     2   30716280 sda2    8     3    8193150 sda3    8     4  135893835 sda4 [root@web1 ~]# </p>
+<h2 id="3-format-partition">3. Format partition</h2>
+<p>[root@db1 /]# <code>mkfs -t ext4 /dev/sdb1</code></p>
+<p>mke2fs 1.35 (28-Feb-2004)</p>
+<p>Filesystem label=</p>
+<p>OS type: Linux</p>
+<p>Block size=4096 (log=2)</p>
+<p>Fragment size=4096 (log=2)</p>
+<p>655360 inodes, 1309289 blocks</p>
+<p>65464 blocks (5.00%) reserved for the super user</p>
+<p>First data block=0</p>
+<p>Maximum filesystem blocks=1342177280</p>
+<p>40 block groups</p>
+<p>32768 blocks per group, 32768 fragments per group</p>
+<p>16384 inodes per group</p>
+<p>Superblock backups stored on blocks:</p>
+<p>​        32768, 98304, 163840, 229376, 294912, 819200, 884736</p>
+<p>Writing inode tables: done</p>
+<p>Creating journal (8192 blocks): done</p>
+<p>Writing superblocks and filesystem accounting information: done</p>
+<p>This filesystem will be automatically checked every 30 mounts or</p>
+<p>180 days, whichever comes first.  Use tune2fs -c or -i to override.</p>
+<h2 id="4-mkdir-and-mount">4. mkdir and mount</h2>
+<p>[root@db1 /]# <code>ls</code></p>
+<p>backup  dev   initrd      media  opt   sbin     sys       usr</p>
+<p>bin     etc   lib         misc   proc  selinux  tftpboot  var</p>
+<p>boot    home  lost+found  mnt    root  srv      tmp</p>
+<p>[root@db1 /]# <code>mkdir /u01</code></p>
+<p>[root@db1 /]# <code>ls</code></p>
+<p>backup  dev   initrd      media  opt   sbin     sys       u01</p>
+<p>bin     etc   lib         misc   proc  selinux  tftpboot  usr</p>
+<p>boot    home  lost+found  mnt    root  srv      tmp       var</p>
+<p>[root@db1 /]# <code>mount /dev/sdb1 /u01</code></p>
+<h2 id="5-check-if-mount-successful">5. Check if mount successful</h2>
+<p>[root@db1 /]# <code>df -k</code></p>
+<p>Filesystem           1K-blocks      Used Available Use% Mounted on</p>
+<p>/dev/sda1              9131772   7066884   1601012  82% /</p>
+<p>none                    454256         0    454256   0% /dev/shm</p>
+<p><strong>/dev/sdb1              5154852     43040   4849956   1% /backup</strong></p>
+<h2 id="6-set-startup-on-boot">6. set startup on boot</h2>
+<p>[root@db1 /]# <code>vi /etc/fstab</code></p>
+<p># This file is edited by fstab-sync - see 'man fstab-sync' for details</p>
+<p>LABEL=/                 /                       ext3    defaults        1 1</p>
+<p>none                    /dev/pts                devpts  gid=5,mode=620  0 0</p>
+<p>none                    /dev/shm                tmpfs   defaults        0 0</p>
+<p>none                    /proc                   proc    defaults        0 0</p>
+<p>none                    /sys                    sysfs   defaults        0 0</p>
+<p>LABEL=SWAP-sda2         swap                    swap    defaults        0 0</p>
+<p><strong>/dev/sdb1               /u01                 ext3    defaults        0 0</strong></p>
+<p>/dev/hdc                /media/cdrom            auto    pamconsole,exec,noauto,m</p>
+<p>anaged 0 0</p>
+<p>/dev/fd0                /media/floppy           auto    pamconsole,exec,noauto,m</p>
+<p>anaged 0 0</p>
+<!-- /content -->
+      <footer>
+        <p>Posted by <a href="https://alset0326.github.io/author/alset0326.html">Alset0326</a> on <time datetime="2018-03-16T16:20:47.645128+08:00">五 16 三月 2018</time> in <a href="https://alset0326.github.io/category/linux.html">linux</a>. <span class="m-label m-success">updated <time datetime="2018-03-16T16:20:47.645128+08:00">五 16 三月 2018</time></span> Tags: <a href="https://alset0326.github.io/tag/linux.html">linux</a>.</p>
+      </footer>
+    </article>
+    <nav class="m-navpanel m-col-m-2">
+      <h3>Categories</h3>
+      <ol class="m-block-bar-m">
+        <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+        <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+        <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+        <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+      </ol>
+      <h3>Tag cloud</h3>
+      <ul class="m-tagcloud">
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/android.html">android</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/aosp.html">aosp</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/heap.html">heap</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/linux.html">linux</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/patch.html">patch</a></li>
+        <li class="m-tag-5"><a href="https://alset0326.github.io/tag/pwn.html">pwn</a></li>
+        <li class="m-tag-2"><a href="https://alset0326.github.io/tag/python.html">python</a></li>
+        <li class="m-tag-1"><a href="https://alset0326.github.io/tag/stack.html">stack</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+</main>
+<footer><nav>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326?tab=repositories">Projects</a></h3>
+        <ul>
+          <li><a href="https://github.com/alset0326/peda-arm">peda-arm</a></li>
+          <li><a href="https://github.com/alset0326/zio3">zio3</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Author</a></h3>
+        <ul>
+          <li><a href="http://127.0.0.1:8000/author/alset0326.html">Alset0326</a></li>
+        </ul>
+      </div>
+      <div class="m-clearfix-t"></div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://github.com/alset0326">Contact</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/alset0326@gmail.com">E-mail</a></li>
+          <li><a href="https://github.com/alset0326">GitHub</a></li>
+        </ul>
+      </div>
+      <div class="m-col-s-3 m-col-t-6">
+        <h3><a href="https://alset0326.github.io/">Blog</a></h3>
+        <ul>
+          <li><a href="https://alset0326.github.io/category/android.html">android</a></li>
+          <li><a href="https://alset0326.github.io/category/linux.html">linux</a></li>
+          <li><a href="https://alset0326.github.io/category/pwn.html">pwn</a></li>
+          <li><a href="https://alset0326.github.io/category/python.html">python</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        <p>A-NOTES. Powered by <a href="https://getpelican.com">Pelican</a> and <a href="http://mcss.mosra.cz">m.css</a>.</p>
+      </div>
+    </div>
+  </div>
+</nav></footer>
+</body>
+</html>

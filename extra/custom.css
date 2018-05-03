@@ -1,0 +1,14 @@
+@media screen and (min-width: 768px) {
+    aside {
+        width: 20%;
+    }
+}
+
+aside nav ul li a {
+    text-transform: uppercase;
+
+}
+
+.highlight {
+    background-color: #f8f8f8;
+}
